@@ -1,0 +1,2 @@
+c_none='\033[0m'
+echo -e "$c_none"'Restting color'

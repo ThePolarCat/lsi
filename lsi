@@ -1,0 +1,131 @@
+#!/bin/bash
+
+#########################################################
+
+# *** TERMINUS.thumbnailView ***
+# View thumbnails of the images located in PWD.
+# imageMagik library will be used to creat small version
+# of each image in the tmp directory to speed up printing.
+
+# Author: Mustafa Anabtawi
+# mustafa@thepolarcat.com
+# www.thepolarcat.com
+
+# created om: Dec 16, 2016
+# Last update: Dec 16, 2016
+
+#########################################################
+
+#{{{ Variable defaults 
+
+thumbsPerLine=4
+thumbW=128	#px
+thumbH=128	#px
+
+#static
+tmpDir=~/.tnvtmp 		#tmp dir to store resized images
+charH=10	#px			#estimated height of CLI line in px
+rowHeight=8				#height (lines) per row of thumbnails
+currentCacheDir=""
+fullPath=""
+currentCLMN=1
+currentROW=1
+
+#}}}
+
+#{{{ Create tmp dir 
+function createTmpDir() {
+	if [[ ! -e $tmpDir ]] ; then
+		mkdir $tmpDir
+	fi
+}
+
+#}}}
+
+#{{{ Print file 
+function print_osc() {
+    if [[ $TERM == screen* ]] ; then
+        printf "\033Ptmux;\033\033]"
+    else
+        printf "\033]"
+    fi
+}
+# More of the tmux workaround described above.
+function print_st() {
+    if [[ $TERM == screen* ]] ; then
+        printf "\a\033\\"
+    else
+        printf "\a"
+    fi
+}
+dIR="A"
+function print_file() {
+	fn=$1
+	newRowHeight=100*$currentROW
+	ratio=$(($thumbH/$charH))
+	h=$(($ratio*$currentROW))
+	Y=$ratio
+	rc=$?
+		print_osc
+		printf '1337;File=name='`echo -n "$fn" | base64`";"
+		#wc -c "$fn" | awk '{printf "size=%d",$1}'
+		printf ";inline=1;preserveAspectRatio=true"
+		printf ":"
+		base64 < "$fn"
+		print_st
+		
+		#if [ x"$TERM" == "xscreen" ] ; then
+			#printf '\033[4C\033[Bx'
+		#else
+			printf "\033[$Y$DIR"
+			#printf "\033["$h"B"
+		#fi
+
+		if [ $currentCLMN -eq $thumbsPerLine ] ; then
+			currentCLMN=1
+			((currentROW++))
+			DIR="B"
+			Y=$(($ratio * ($currentCLMN)))
+			#printf "\033["$h"B"
+			#printf "\033["$h"B"
+			#printf "\033[130D"
+			#printf "\033[$newRowHeight;1H"
+		fi
+		((currentCLMN++))
+}
+#}}}
+
+#{{{ Convert thumbnails 
+function convertThumbnails(){
+	#Make cache dir
+	currentCacheDir=$(date "+%H%M%S%d%m%y")
+	fullPath="$tmpDir/$currentCacheDir"
+	mkdir $fullPath
+	find . -maxdepth 1 -type f -name "*.bmp" -o -name "*.jpg" -o -name "*.bmp" -o -name "*.psd" | xargs -I {} convert {} -resize $thumbWx$thumbH $fullPath"/"{}
+}
+#}}}
+
+#{{{ Display thumbnails 
+function displayThumbs(){
+	for file in $fullPath/*; do
+		print_file $file
+	done
+}
+#}}}
+
+
+
+#printf '\033[s'
+#print_file $1
+#plist_file $1
+#plist_file $1
+#echo
+#echo
+
+createTmpDir
+convertThumbnails
+displayThumbs
+printf "\n\033[12B"
+exit 0
+#printf '\033[12B'
+#printf '\033[u'
