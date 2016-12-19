@@ -80,6 +80,7 @@ function print_file() {
 	printf ":"
 	printf "%s" "$one"
 	print_st
+	#printf "\n"
 	#X=$((0*$currentCLMN))
 	#Y=$((4*$currentROW))
 	((currentCLMN++))
@@ -87,6 +88,10 @@ function print_file() {
 		currentCLMN=0
 		printf "\033[65D"
 		# printf "\033[3B"
+		nameX=$(( 16*($currentCLMN+1) ))
+		printf "\033[16DName\033[$nameX""CName2""\033[$nameX""CName3""\033[$nameX""CName4"
+
+
 		printf "\n\n"
 		((currentROW++))
 	else
