@@ -28,7 +28,7 @@ charH=17	#px			#estimated height of CLI line in px
 rowHeight=8				#height (lines) per row of thumbnails
 currentCacheDir=""
 fullPath=""
-currentCLMN=1
+currentCLMN=0
 currentROW=1
 
 #}}}
@@ -62,13 +62,8 @@ function print_st() {
 }
 #}}}
 
-DIR="A"
 function print_file() {
 	fn=$1
-	newRowHeight=100*$currentROW
-	ratio=$(($thumbH/$charH))
-	h=$(($ratio*$currentROW))
-	Y=$h$DIR
 	print_osc
 	printf "1337;File=%s $1 | base64;"
 	VERSION=$(base64 --version 2>&1)
@@ -85,21 +80,17 @@ function print_file() {
 	printf ":"
 	printf "%s" "$one"
 	print_st
-	#printf "\033[$Y"
+	#X=$((0*$currentCLMN))
+	#Y=$((4*$currentROW))
 	((currentCLMN++))
-	if [ $currentCLMN -eq 4 ] ; then
-		currentCLMN=1
-		DIR="B"
-		#printf "\033[80D"
-		#printf "\033[8B"
-		#printf "\n\n"
+	if [ $currentCLMN -eq $thumbsPerLine ] ; then
+		currentCLMN=0
+		printf "\033[65D"
+		# printf "\033[3B"
+		printf "\n\n"
 		((currentROW++))
-	fi
-	if [ $currentROW -eq 1 ] ; then
-		printf "\033[7A"
 	else
-		printf "\033[5D"
-		#printf "\033[7B"
+		printf "\033[7A"
 	fi
 }
 #}}}
@@ -116,25 +107,18 @@ function convertThumbnails(){
 
 #{{{ Display thumbnails 
 function displayThumbs(){
+	printf "\n\n"
 	for file in $fullPath/*; do
 		print_file $file
 	done
+	printf "\n"
 }
 #}}}
-
-
-
-#printf '\033[s'
-#print_file $1
-#plist_file $1
-#plist_file $1
-#echo
-#echo
 
 createTmpDir
 convertThumbnails
 displayThumbs
-printf "\n\033[12B"
+
+#printf '\033[7B'
+
 exit 0
-#printf '\033[12B'
-#printf '\033[u'
