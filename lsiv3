@@ -18,12 +18,12 @@
 
 #{{{ Variable defaults 
 
-thumbsPerLine=4
+thumbsPerLine=3
 thumbW=128	#px
 thumbH=128	#px
 
 #static
-tmpDir=~/.tnvtmp 		#tmp dir to store resized images
+tmpDir=~/.lsitmp 		#tmp dir to store resized images
 charH=17	#px			#estimated height of CLI line in px
 rowHeight=8				#height (lines) per row of thumbnails
 currentCacheDir=""
@@ -40,6 +40,19 @@ function createTmpDir() {
 	fi
 }
 
+#}}}
+
+#{{{ Get cursor cordinates 
+function getCurCords(){
+	local COL
+	local ROW
+	IFS=';' read -sdR -p $'\E[6n' ROW COL
+	if [[ $1 = "X" ]] ; then
+		return "${ROW#*[}"
+	else
+		return "${COL#*[}"
+	fi
+}
 #}}}
 
 #{{{ Print file 
@@ -63,6 +76,8 @@ function print_st() {
 #}}}
 
 function print_file() {
+
+	#{{{ base64 
 	fn=$1
 	print_osc
 	printf "1337;File=%s $1 | base64;"
@@ -80,35 +95,30 @@ function print_file() {
 	printf ":"
 	printf "%s" "$one"
 	print_st
-	#printf "\n"
-	#X=$((0*$currentCLMN))
-	#Y=$((4*$currentROW))
+	#}}}
 
-	# nameX=$(( 16*($currentCLMN+1) ))
+	cordsX=$(getCurCords X)
+	echo $cordsX
+
 	g=$2
 	fileName=${g:-15}
-	printf "\033[1B\033[16D$fileName\033[1A"
+	tput cud 1; tput cub 16; printf "$fileName"; tput cuu 1;
 
 	((currentCLMN++))
 	if [ $currentCLMN -eq $thumbsPerLine ] ; then
 		currentCLMN=0
-		#printf "\033[65D"
-		#printf "\033[3B"
-		#nameX=$(( 16*($currentCLMN+1) ))
 
-		#Space under each roe
-		printf "\033[1B"
+		#Space under each row
+		#tput cud 3;
+		tput cub 110;
 		printf "\n\n"
 
 		((currentROW++))
 	else
-		printf "\033[7A"
+		tput cuu 7;
 	fi
-
-		#printf "\033[7C"
-
-
 }
+
 #}}}
 
 #{{{ Convert thumbnails 
@@ -123,12 +133,13 @@ function convertThumbnails(){
 
 #{{{ Display thumbnails 
 function displayThumbs(){
-	printf "\n\n"
+	#printf "\n\n"
 	for file in $fullPath/*; do
 		print_file $file "${file##*/}"
 
 	done
-	printf "\033[10B\n\n"
+	tput cud 7
+	 printf "\n\n\n"
 }
 #}}}
 

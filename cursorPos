@@ -1,0 +1,38 @@
+#!/bin/bash
+function pos
+{
+	local CURPOS
+	read -sdR -p $'\E[6n' CURPOS
+	CURPOS=${CURPOS#*[} # Strip decoration characters <ESC>[
+	echo "${CURPOS}"    # Return position in "row;col" format
+}
+function row
+{
+	local COL
+	local ROW
+	IFS=';' read -sdR -p $'\E[6n' ROW COL
+	echo "${ROW#*[}"
+}
+function col
+{
+	local COL
+	local ROW
+	IFS=';' read -sdR -p $'\E[6n' ROW COL
+	echo "${COL}"
+}
+tput sc         # Save cursor position
+tput cup 5 10   # Move to row 6 col 11
+POS1=$(pos)     # Get the cursor position
+ROW1=$(row)
+COL1=$(col)
+tput cup 25 15  # Move to row 25 col 15
+POS2=$(pos)     # Get the cursor position
+ROW2=$(row)
+COL2=$(col)
+tput rc # Restore cursor position
+echo $BASH_VERSION
+echo $POS1 $ROW1 $COL1
+echo $POS2 $ROW2 $COL2
+
+#Run in interactive shell
+#IFS=';' read -sdR -p $'\E[6n' ROW COL;echo "${ROW#*[}"
