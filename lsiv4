@@ -12,7 +12,7 @@
 # www.thepolarcat.com
 
 # created om: Dec 16, 2016
-# Last update: Dec 20, 2016
+# Last update: Dec 22, 2016
 
 #########################################################
 
@@ -137,19 +137,23 @@ function displayThumbs(){
 
 			tput cup $newRow $newCol;
 			print_file ${files[($index)]}
+			g="${files[($index)]##*/}"
+			amountToTrim=15
+			filenameLength=${#g}
+			if [[ $filenameLength -lt $amountToTrim ]] ; then
+				amountToTrim=$filenameLength
+			fi
+			fileName=${g:(-$amountToTrim)}
+			tput cup $(($newRow+$thumbHeight+1)) $newCol; printf $fileName
 			#echo R$newRow C$newCol 
 
 			((index++))
 
-			#${files[($index)]}"##*/}"
 			#tput setaf 1
 		done
 	done
 
-	tput cup $(($newRow+$thumbHeight+$margin)) 0
-
-##	g=$2
-##	fileName=${g:-15}
+	tput cup $(($newRow+$thumbHeight+$margin+1)) 0
 }
 
 #}}}
