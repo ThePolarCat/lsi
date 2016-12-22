@@ -2,7 +2,7 @@
 
 #########################################################
 
-# *** TERMINUS.thumbnailView ***
+# *** TPC.listThumbnails ***
 # View thumbnails of the images located in PWD.
 # imageMagik library will be used to creat small version
 # of each image in the tmp directory to speed up printing.
@@ -48,9 +48,9 @@ function getCurCords(){
 	local ROW
 	IFS=';' read -sdR -p $'\E[6n' ROW COL
 	if [[ $1 = "X" ]] ; then
-		echo "${ROW#*[}"
-	else
 		echo "${COL#*[}"
+	else
+		echo "${ROW#*[}"
 	fi
 }
 #}}}
@@ -76,8 +76,6 @@ function print_st() {
 #}}}
 
 function print_file() {
-
-	#{{{ base64 
 	fn=$1
 	print_osc
 	printf "1337;File=%s $1 | base64;"
@@ -95,28 +93,6 @@ function print_file() {
 	printf ":"
 	printf "%s" "$one"
 	print_st
-	#}}}
-
-	cordsX=$(getCurCords X)
-	echo $cordsX
-
-	g=$2
-	fileName=${g:-15}
-	tput cud 1; tput cub 16; printf "$fileName"; tput cuu 1;
-
-	((currentCLMN++))
-	if [ $currentCLMN -eq $thumbsPerLine ] ; then
-		currentCLMN=0
-
-		#Space under each row
-		#tput cud 3;
-		tput cub 110;
-		printf "\n\n"
-
-		((currentROW++))
-	else
-		tput cuu 7;
-	fi
 }
 
 #}}}
@@ -128,27 +104,58 @@ function convertThumbnails(){
 	fullPath="$tmpDir/$currentCacheDir"
 	mkdir $fullPath
 	find . -maxdepth 1 -type f -name "*.bmp" -o -name "*.jpg" -o -name "*.bmp" -o -name "*.psd" | xargs -I {} convert {} -resize $thumbWx$thumbH! $fullPath"/"{}
-row=$(getCurCords "X")
-echo $row
 }
 #}}}
 
 #{{{ Display thumbnails 
 function displayThumbs(){
-	#printf "\n\n"
-	for file in $fullPath/*; do
-		print_file $file "${file##*/}"
+	clear
+	local files=($fullPath/*)
+	local numfiles=${#files[@]}
+	local numRows=$(($numfiles/$thumbsPerLine))
+	local index=0
+	local newRow=0
+	local newCol=0
+	local margin=2
+	local thumbHeight=7
 
+	currentCol=$(getCurCords X)
+	currentRow=$(getCurCords Y)
+
+
+	for (( i = 0; i <= $numRows; i++ )); do
+		newRow=$(( (($currentRow+$thumbHeight+$margin)*$i) + $margin ))
+		
+		for (( j = 0; j < $thumbsPerLine; j++ )); do
+			
+			newCol=$((($currentCol+20)*$j));
+
+			if [[ $index -ge $numfiles ]] ; then
+				#tput cup 0 $(($newRow+$((7+$margin))))
+				break
+			fi
+
+			tput cup $newRow $newCol;
+			print_file ${files[($index)]}
+			#echo R$newRow C$newCol 
+
+			((index++))
+
+			#${files[($index)]}"##*/}"
+			#tput setaf 1
+		done
 	done
-	tput cud 7
-	 printf "\n\n\n"
+
+	tput cup $(($newRow+$thumbHeight+$margin)) 0
+
+##	g=$2
+##	fileName=${g:-15}
 }
+
 #}}}
 
- createTmpDir
- convertThumbnails
- displayThumbs
-
-#printf '\033[7B'
+createTmpDir
+convertThumbnails
+displayThumbs
 
 exit 0
