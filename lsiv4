@@ -18,12 +18,12 @@
 
 #{{{ Variable defaults 
 
-thumbsPerLine=3
-thumbW=128	#px
-thumbH=128	#px
+thumbsPerLine=4
+thumbW=128		#px
+thumbH=$thumbW	#px
 
 #static
-tmpDir=~/.lsitmp 		#tmp dir to store resized images
+tmpDir=~/.lsitmp		#tmp dir to store resized images
 charH=17	#px			#estimated height of CLI line in px
 rowHeight=8				#height (lines) per row of thumbnails
 currentCacheDir=""
@@ -98,12 +98,23 @@ function print_file() {
 #}}}
 
 #{{{ Convert thumbnails 
+
+function resizeImage(){
+	f="${1##*/}"
+	numpixels=$thumbW*$thumbH
+	wHalf=$thumbW/2
+	hHalf=$thumbH/2
+	convert -define jpeg:size=$thumbW'x'$thumbH $f -thumbnail 10000@ \-gravity center -background "#ff0000" -extent $thumbW'x'$thumbH $1
+}
+
 function convertThumbnails(){
 	#Make cache dir
 	currentCacheDir=$(date "+%H%M%S%d%m%y")
 	fullPath="$tmpDir/$currentCacheDir"
 	mkdir $fullPath
-	find . -maxdepth 1 -type f -name "*.bmp" -o -name "*.jpg" -o -name "*.bmp" -o -name "*.psd" | xargs -I {} convert {} -resize $thumbWx$thumbH! $fullPath"/"{}
+	export -f resizeImage
+	find . -maxdepth 1 -type f -name "*.bmp" -o -name "*.jpg" -o -name "*.bmp" -o -name "*.psd" | xargs -I {} bash -c 'resizeImage "'$fullPath/'{}"'
+
 }
 #}}}
 
@@ -137,6 +148,7 @@ function displayThumbs(){
 
 			tput cup $newRow $newCol;
 			print_file ${files[($index)]}
+			
 			g="${files[($index)]##*/}"
 			amountToTrim=15
 			filenameLength=${#g}
@@ -154,6 +166,11 @@ function displayThumbs(){
 	done
 
 	tput cup $(($newRow+$thumbHeight+$margin+1)) 0
+	printf "\n\n"
+
+	#Remvoe tmp dir
+	sleep 0.1
+	rm -rf $tmpDir
 }
 
 #}}}
@@ -161,5 +178,27 @@ function displayThumbs(){
 createTmpDir
 convertThumbnails
 displayThumbs
+
+
+
+# Put : after a character to expect an argument
+while getopts "d:n:" flag; do
+	case $flag in
+		d)	thumbW=$OPTARG
+			thumbH=$OPTARG
+		;;
+
+		n)	thumbsPerLine=$OPTARG
+		;;
+
+		\?) echo "Invalid Option: -$OPTARG" >&2
+			exit 1
+			;;
+
+		:) echo "Option -$OPTARG requires an argument" >&2
+			exit 1
+			;;
+	esac
+done
 
 exit 0
