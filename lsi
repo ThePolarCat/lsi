@@ -12,7 +12,7 @@
 # www.thepolarcat.com
 
 # created om: Dec 16, 2016
-# Last update: Dec 25, 2016
+# Last update: Dec 26, 2016
 
 #########################################################
 
@@ -178,14 +178,26 @@ function displayThumbs(){
 
 #}}}
 
+#{{{ Show help 
+function showHelp(){
+	printf "\nList the images in a directory in thumbnail view."
+	printf "\n"
+	printf "\n\t-n\tChange the number of images per row [ -n 6]"
+	printf "\n\t-d\tChange the size of the thumbnails in pixels, they can only be squares [-d 200]"
+	printf "\n\t-h\tShow this help message"
+	printf "\n\n"
+}
+#}}}
+
+#{{{ Init 
 function init(){
 	createTmpDir
 	convertThumbnails
 	displayThumbs
 }
+#}}}
 
-# Put : after a character to expect an argument
-while getopts "d:n:" flag; do
+while getopts "d:n:h" flag; do
 	case $flag in
 		d)	thumbW=$OPTARG
 			thumbH=$OPTARG
@@ -193,6 +205,10 @@ while getopts "d:n:" flag; do
 
 		n)	thumbsPerLine=$OPTARG
 		;;
+		
+		h)	showHelp
+			exit 1
+			;;
 
 		\?) echo "Invalid Option: -$OPTARG" >&2
 			exit 1
@@ -205,7 +221,5 @@ while getopts "d:n:" flag; do
 done
 
 init
-
-#[ $ish -eq 1 ] || checkRelease
 
 exit 0
