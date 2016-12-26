@@ -1,0 +1,225 @@
+#!/bin/bash
+
+#########################################################
+
+# *** TPC.listThumbnails ***
+# View thumbnails of the images located in PWD.
+# imageMagik library will be used to creat small version
+# of each image in the tmp directory to speed up printing.
+
+# Author: Mustafa Anabtawi
+# mustafa@thepolarcat.com
+# www.thepolarcat.com
+
+# created om: Dec 16, 2016
+# Last update: Dec 26, 2016
+
+#########################################################
+
+#{{{ Variable defaults 
+
+thumbsPerLine=4
+thumbW=128		#px
+thumbH=128		#px
+#static
+tmpDir=~/.lsitmp		#tmp dir to store resized images
+charH=17	#px			#estimated height of CLI line in px
+rowHeight=8				#height (lines) per row of thumbnails
+currentCacheDir=""
+fullPath=""
+currentCLMN=0
+currentROW=1
+
+#}}}
+
+#{{{ Create tmp dir 
+function createTmpDir() {
+	if [[ ! -e $tmpDir ]] ; then
+		mkdir $tmpDir
+	fi
+}
+
+#}}}
+
+#{{{ Get cursor cordinates 
+function getCurCords(){
+	local COL
+	local ROW
+	IFS=';' read -sdR -p $'\E[6n' ROW COL
+	if [[ $1 = "X" ]] ; then
+		echo "${COL#*[}"
+	else
+		echo "${ROW#*[}"
+	fi
+}
+#}}}
+
+#{{{ Print file 
+
+#{{{
+function print_osc() {
+    if [[ $TERM == screen* ]] ; then
+        printf "\033Ptmux;\033\033]"
+    else
+        printf "\033]"
+    fi
+}
+# More of the tmux workaround described above.
+function print_st() {
+    if [[ $TERM == screen* ]] ; then
+        printf "\a\033\\"
+    else
+        printf "\a"
+    fi
+}
+#}}}
+
+function print_file() {
+	fn=$1
+	print_osc
+	printf "1337;File=%s $1 | base64;"
+	VERSION=$(base64 --version 2>&1)
+	if [[ "$VERSION" =~ fourmilab ]]; then
+		BASE64ARG=-d
+	elif [[ "$VERSION" =~ GNU ]]; then
+		BASE64ARG=-di
+	else
+		BASE64ARG=-D
+	fi
+	one="$(base64 < "$1")"
+	printf "%s" $one | base64 $BASE64ARG | wc -c | awk '{printf "size=%d",$1}'
+	printf ";inline=1"
+	printf ":"
+	printf "%s" "$one"
+	print_st
+}
+
+#}}}
+
+#{{{ Convert thumbnails 
+
+function resizeImage(){
+	f="${1##*/}"
+	thumbW=$2
+	thumbH=$3
+	numpixels=$(($thumbW*$thumbH))
+	wHalf=$thumbW/2
+	hHalf=$thumbH/2
+	HW=$thumbW'x'$thumbH
+	convert -define jpeg:size=$HW $f -thumbnail $numpixels@ \-gravity center -background "#111111" -extent $HW $1
+}
+
+function convertThumbnails(){
+	#Make cache dir
+	currentCacheDir=$(date "+%H%M%S%d%m%y")
+	fullPath="$tmpDir/$currentCacheDir"
+	mkdir $fullPath
+	export -f resizeImage
+	find . -maxdepth 1 -type f -name "*.bmp" -o -name "*.jpg" -o -name "*.bmp" -o -name "*.psd" | xargs -I {} bash -c 'resizeImage "'$fullPath/'{}" '$thumbW' '$thumbH''
+
+}
+#}}}
+
+#{{{ Display thumbnails 
+function displayThumbs(){
+	clear
+	local files=($fullPath/*)
+	local numfiles=${#files[@]}
+	local numRows=$(($numfiles/$thumbsPerLine))
+	local index=0
+	local newRow=0
+	local newCol=0
+	local margin=2
+	local thumbHeight=$(($thumbH/16))
+	local thumbWidth=$(($thumbW/6))
+
+	currentCol=$(getCurCords X)
+	currentRow=$(getCurCords Y)
+
+
+	for (( i = 0; i <= $numRows; i++ )); do
+		newRow=$(( (($currentRow+$thumbHeight+$margin)*$i) + $margin ))
+		
+		for (( j = 0; j < $thumbsPerLine; j++ )); do
+			
+			newCol=$((($currentCol+$thumbWidth)*$j));
+
+			if [[ $index -ge $numfiles ]] ; then
+				#tput cup 0 $(($newRow+$((7+$margin))))
+				break
+			fi
+
+			tput cup $newRow $newCol;
+			print_file ${files[($index)]}
+			
+			g="${files[($index)]##*/}"
+			amountToTrim=15
+			filenameLength=${#g}
+			if [[ $filenameLength -lt $amountToTrim ]] ; then
+				amountToTrim=$filenameLength
+			fi
+			fileName=${g:(-$amountToTrim)}
+			tput cup $(($newRow+$thumbHeight+1)) $newCol; printf $fileName
+			#echo R$newRow C$newCol 
+
+			((index++))
+
+			#tput setaf 1
+		done
+	done
+
+	tput cup $(($newRow+$thumbHeight+$margin+1)) 0
+	printf "\n\n"
+
+	#Remvoe tmp dir
+	sleep 0.1
+	rm -rf $tmpDir
+}
+
+#}}}
+
+#{{{ Show help 
+function showHelp(){
+	printf "\nList the images in a directory in thumbnail view."
+	printf "\n"
+	printf "\n\t-n\tChange the number of images per row [ -n 6]"
+	printf "\n\t-d\tChange the size of the thumbnails in pixels, they can only be squares [-d 200]"
+	printf "\n\t-h\tShow this help message"
+	printf "\n\n"
+}
+#}}}
+
+#{{{ Init 
+function init(){
+	createTmpDir
+	convertThumbnails
+	displayThumbs
+}
+#}}}
+
+while getopts "d:n:h" flag; do
+	case $flag in
+		d)	thumbW=$OPTARG
+			thumbH=$OPTARG
+		;;
+
+		n)	thumbsPerLine=$OPTARG
+		;;
+		
+		h)	showHelp
+			exit 1
+			;;
+
+		\?) echo "Invalid Option: -$OPTARG" >&2
+			exit 1
+			;;
+
+		:) echo "Option -$OPTARG requires an argument" >&2
+			exit 1
+			;;
+	esac
+done
+
+init
+
+exit 0
